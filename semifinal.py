@@ -50,12 +50,6 @@ from cassandra.auth import PlainTextAuthProvider
 # redis_conn = connect_to_redis()
 
 
-
-
-import redis
-from cassandra.cluster import Cluster
-from cassandra.query import SimpleStatement
-
 # Initialize Redis connection
 def connect_to_redis():
     try:
@@ -71,7 +65,7 @@ def connect_to_redis():
 def connect_to_cassandra():
     try:
         cluster = Cluster(['localhost'])
-        session = cluster.connect('GamePlatform')
+        session = cluster.connect('game_platform')
         print("Connected to Cassandra")
         return session
     except Exception as e:
