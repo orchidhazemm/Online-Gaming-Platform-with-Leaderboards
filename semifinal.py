@@ -104,8 +104,8 @@ def send_chat_message(guild_id, player_name, message):
         print(f"Caught an error: {e}")
 
 # Example usage
-update_player_location('noor', '-999', '55555')
-update_player_location('KOKKKKY', '22222', '9999999')
+update_player_location('Playerorchidhazem', '2003', '010258')
+update_player_location('SucessAcadenmy', '96301', '8794')
 log_game_event('koky', 'item_pickup', 'picked up a rare sword')
 update_leaderboard('player1', 500)
 send_chat_message('guild1', 'player1', 'Hello team!')
