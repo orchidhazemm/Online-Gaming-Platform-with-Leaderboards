@@ -52,10 +52,16 @@ def insert_game_analytics(event_type, player_username, event_data):
     )
 
 # Example usage
-insert_player_profile('NOOR', 'NOOR@example.com', 'pic1.png', ['ach1', 'ach2'], ['item1', 'item2'], ['friend1', 'friend2'])
-insert_game_data('tic tac toe', 'mind', 'active', 'world1')
-insert_game_object(uuid.uuid4(), 'sword', 'x:10,y:20', {'damage': '100', 'weight': '5'})
-insert_game_analytics('item_pickup', 'NOOR', {'item': 'sword', 'description': 'A mighty sword'})
+insert_player_profile('NOOR', 'NOOR@example.com', 'pic1.png', ['best player', 'best kill'], ['killer weapon', 'curved khinfe'], ['habiba', 'farida'])
+insert_player_profile('ORCHID', 'ORCHID@example.com', 'pic2.png', ['most kills', 'high score'], ['grenade', 'knife'], ['toota', 'hana'])
+insert_player_profile('SAMY', 'SAMY@example.com', 'pic3.png', ['most wins', 'best shooter'], ['sword', 'shot gun'], ['sherif', 'batreek'])
+insert_game_data('Pubg', 'war', 'active', 'world1')
+insert_game_object(uuid.uuid4(), 'sword', 'x:50,y:20', {'damage': '60', 'weight': '5'})
+insert_game_object(uuid.uuid4(), 'shot gun', 'x:100,y:45', {'damage': '100', 'weight': '7'})
+insert_game_object(uuid.uuid4(), 'grenade', 'x:65,y:88', {'damage': '105', 'weight': '2'})
+insert_game_analytics('kill', 'NOOR', {'item': 'killer weapon', 'description': 'A killer weapon'})
+insert_game_analytics('item_pickup', 'ORCHID', {'item': 'grenade', 'description': 'explosion'})
+insert_game_analytics('shoot', 'SAMY', {'item': 'shot gun', 'description': 'killer shot'})
 
 
 
@@ -154,7 +160,15 @@ def send_chat_message(guild_id, player_name, message):
         print(f"Caught an error: {e}")
 
 # Example usage
-update_player_location('chessorchid', '88888', '77777')
-log_game_event('chesssaimii', 'item_pickup', 'picked up a rare sword')
-update_leaderboard('samii', 2003)
-send_chat_message('guild500', 'sherif', 'Hello team!')
+update_player_location('NOOR', '888', '777')
+update_player_location('ORCHID', '999', '666')
+update_player_location('SAMY', '111', '222')
+log_game_event('NOOR', 'kill', 'killed a person')
+log_game_event('ORCHID', 'explosion', 'threw a grenade')
+log_game_event('SAMY', 'shoot', 'shot a person')
+update_leaderboard('NOOR', 800)
+update_leaderboard('ORCHID', 700)
+update_leaderboard('SAMY', 600)
+send_chat_message('guild1', 'NOOR', 'Hello team!')
+send_chat_message('guild2', 'ORCHID', 'Send Help')
+send_chat_message('guild3', 'SAMY', 'Follow me!')
