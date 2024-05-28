@@ -50,18 +50,35 @@ def insert_game_analytics(event_type, player_username, event_data):
         """,
         (event_id, event_type, player_username, event_data, timestamp)
     )
+    
+# Function to insert/update player statistics in Cassandra
+def insert_player_statistics(username, combat_stats, resource_stats, progression_stats):
+    session.execute(
+        """
+        INSERT INTO player_statistics (username, combat_stats, resource_stats, progression_stats)
+        VALUES (%s, %s, %s, %s)
+        USING TTL 86400;
+        """,
+        (username, combat_stats, resource_stats, progression_stats)
+    )
+
+
 
 # Example usage
 insert_player_profile('NOOR', 'NOOR@example.com', 'pic1.png', ['best player', 'best kill'], ['killer weapon', 'curved khinfe'], ['habiba', 'farida'])
 insert_player_profile('ORCHID', 'ORCHID@example.com', 'pic2.png', ['most kills', 'high score'], ['grenade', 'knife'], ['toota', 'hana'])
 insert_player_profile('SAMY', 'SAMY@example.com', 'pic3.png', ['most wins', 'best shooter'], ['sword', 'shot gun'], ['sherif', 'batreek'])
+
 insert_game_data('Pubg', 'war', 'active', 'world1')
 insert_game_object(uuid.uuid4(), 'sword', 'x:50,y:20', {'damage': '60', 'weight': '5'})
 insert_game_object(uuid.uuid4(), 'shot gun', 'x:100,y:45', {'damage': '100', 'weight': '7'})
 insert_game_object(uuid.uuid4(), 'grenade', 'x:65,y:88', {'damage': '105', 'weight': '2'})
+
 insert_game_analytics('kill', 'NOOR', {'item': 'killer weapon', 'description': 'A killer weapon'})
 insert_game_analytics('item_pickup', 'ORCHID', {'item': 'grenade', 'description': 'explosion'})
 insert_game_analytics('shoot', 'SAMY', {'item': 'shot gun', 'description': 'killer shot'})
+
+insert_player_statistics('NOOR', {'damage': 500, 'enemies_defeated': 5}, {'Guns': 20, 'bullets': 10}, {'level': '5', 'quests': ','.join(['shot', 'run'])})
 
 
 
@@ -111,6 +128,14 @@ insert_game_analytics('shoot', 'SAMY', {'item': 'shot gun', 'description': 'kill
 # )
 # """)
 
+# CREATE TABLE IF NOT EXISTS player_statistics (
+#     username TEXT PRIMARY KEY,
+#     combat_stats MAP<TEXT, INT>,
+#     resource_stats MAP<TEXT, INT>,
+#     progression_stats MAP<TEXT, TEXT>
+# );
+
+
 
 # Connect to Redis running in Docker
 redis_client = redis.Redis(host='127.0.0.1', port=6379, db=0)
@@ -142,13 +167,9 @@ def log_game_event(player_name, event_type, details):
     except redis.exceptions.ResponseError as e:
         print(f"Caught an error: {e}")
 
-def update_leaderboard(player_id, score):
-    try:
-        redis_client.zadd('leaderboard:points', {player_id: score})
-    except redis.exceptions.ResponseError as e:
-        print(f"Caught an error: {e}")
 
 def send_chat_message(guild_id, player_name, message):
+    
     chat_message = {
         'player_name': player_name,
         'message': message,
@@ -156,19 +177,71 @@ def send_chat_message(guild_id, player_name, message):
     }
     try:
         redis_client.rpush(f'chat_messages:{guild_id}', json.dumps(chat_message))
-    except redis.exceptions.ResponseError as e:
-        print(f"Caught an error: {e}")
+    except redis.exceptions.RedisError as e:
+        print(f"Redis error: {e}")
+
+def get_chat_messages(guild_id, count=10):
+    
+    try:
+        messages = redis_client.lrange(f'chat_messages:{guild_id}', -count, -1)
+        return [json.loads(message) for message in messages]
+    except redis.exceptions.RedisError as e:
+        print(f"Redis error: {e}")
+        return []
+        
+        
+def update_leaderboard(player_id, metric, score):
+    
+    try:
+        # Increment the score for cumulative metrics like points and wins
+        if metric in ['points', 'wins']:
+            redis_client.zincrby(f'leaderboard:{metric}', score, player_id)
+        # Set a new score for metrics like completion time where the latest value is what matters
+        elif metric == 'completion_time':
+            redis_client.zadd(f'leaderboard:{metric}', {player_id: score})
+    except redis.exceptions.RedisError as e:
+        print(f"Redis error: {e}")
+
+
 
 # Example usage
 update_player_location('NOOR', '888', '777')
 update_player_location('ORCHID', '999', '666')
 update_player_location('SAMY', '111', '222')
+
 log_game_event('NOOR', 'kill', 'killed a person')
 log_game_event('ORCHID', 'explosion', 'threw a grenade')
 log_game_event('SAMY', 'shoot', 'shot a person')
-update_leaderboard('NOOR', 800)
-update_leaderboard('ORCHID', 700)
-update_leaderboard('SAMY', 600)
+
 send_chat_message('guild1', 'NOOR', 'Hello team!')
-send_chat_message('guild2', 'ORCHID', 'Send Help')
+send_chat_message('guild1', 'NOOR', 'Where are everyone?')
+send_chat_message('guild2', 'ORCHID', 'Send Help!')
+send_chat_message('guild2', 'ORCHID', 'Ice!')
 send_chat_message('guild3', 'SAMY', 'Follow me!')
+
+get_chat_messages('guild1', 5)
+
+update_leaderboard('NOOR', 'points', 50)
+update_leaderboard('ORCHID', 'wins', 1)
+update_leaderboard('SAMY', 'completion_time', 3600)
+
+
+# def update_total_message_count_in_cassandra(player_name):
+#     """
+#     Updates the total message count for a player in Cassandra based on the Redis data.
+#     - player_name: Name of the player whose message count is being updated.
+#     """
+#     try:
+#         total_messages = int(redis_client.hget('player_message_count', player_name))
+#         session.execute(
+#             """
+#             INSERT INTO player_message_counts (username, message_count)
+#             VALUES (%s, %s)
+#             ON CONFLICT (username) DO UPDATE SET message_count = %s
+#             """,
+#             (player_name, total_messages, total_messages)
+#         )
+#     except redis.exceptions.RedisError as e:
+#         print(f"Redis error: {e}")
+#     except Exception as e:
+#         print(f"Cassandra error: {e}")
